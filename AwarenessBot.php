@@ -27,8 +27,6 @@ $dbid = '';
 // SQL Snippets we use. This isnt best practice, but it works very well
 $sql_getAllUsers = 'SELECT id, chat_id, pseudo From ' . $table_name . ';';
 $sql_insertNewUser= 'INSERT INTO ' . $table_name . '(chat_id,pseudo) Values("' . $chat_id . '","");';
-$sql_blockUser = 'UPDATE ' . $table_name . ' SET pseudo= "blocked" WHERE chat_id = "' . $blockChat_id . '";';
-$sql_updatePseudo = 'UPDATE ' . $table_name . ' SET pseudo = "' . $pseudo . '" WHERE chat_id = "'. $chat_id .'";';
 
 //Startnachricht (&#10 = new line)
 if (stripos($message, '/start') === 0 && $type == 'private') {
@@ -83,7 +81,7 @@ if(!$chat_id_found && !$message_from_awareness) {
     }
 }
 
-// Set a Pseudonym if there is no. 
+// Set a Pseudonym if there is no.
 if (!$user_has_pseudo && !$message_from_awareness) {
     // If the user has no pseudo and message is not from awareness
     // Get Again all Users, cause maybe the user is new in the database
@@ -100,6 +98,7 @@ if (!$user_has_pseudo && !$message_from_awareness) {
         // Building a unique pseudonym for the User
         $pseudo = 'Anonymous' . $dbid;
         // Set the Pseudonym for the User
+        $sql_updatePseudo = 'UPDATE ' . $table_name . ' SET pseudo = "' . $pseudo . '" WHERE chat_id = "'. $chat_id .'";';
         if (mysqli_query($conn, $sql_updatePseudo)) {
                 echo "New record created successfully";
                 // Send the Pseudonym to the user, if db entry success
@@ -112,9 +111,14 @@ if (!$user_has_pseudo && !$message_from_awareness) {
 
 // forward any user message to AT
 if ($user_has_pseudo && !$message_from_awareness && ($pseudo != 'blocked')) {
+    if ($pseudo == 'blocked') {
+        $sent = true;
+        sendMessage($bot_id,$chat_id,false,'Deine Nachricht wurde nicht weitergeleitet, da du als blockiert markiert wurdest. Bitte wähle einen anderen weg um mit dem Awarenessteam in Kontakt zu treten.');
+    } else {
         $sent = true;
         $targetChat_id = AT_CHAT_ID;
         sendMessage($bot_id,$targetChat_id,false, $pseudo . ' schrieb: &#10 &#10' . $message);
+    }
 }
 
 // Forward AT Message to User
@@ -124,8 +128,8 @@ if(strpos(strtolower($message),'/answer') !== false) {
     if($message_from_awareness) {
         $result_user = mysqli_query($conn, $sql_getAllUsers);
         while ($row = mysqli_fetch_assoc($result_user)) {
-            // We are checking, if after the pseudonym is a break for a new line thats why, we are adding '&#10' 
-            $pseudo = $row['pseudo'] . "&#10";
+            // We are checking, if after the pseudonym is a break for a new line thats why, we are adding '&#10'
+            $pseudo = $row['pseudo'];
             if(strpos(strtolower($message),strtolower($pseudo)) !== false) {
                 $targetChat_id = $row['chat_id'];
                 $pseudo = $row['pseudo'];
@@ -142,14 +146,22 @@ if(strpos(strtolower($message),'/answer') !== false) {
 // Check for the Command /block
 if(strpos(strtolower($message),'/block') !== false) {
     if($message_from_awareness) {
+        $result_user = mysqli_query($conn, $sql_getAllUsers);
         while ($row = mysqli_fetch_assoc($result_user)) {
-            // We are checking, if after the pseudonym is a break for a new line thats why, we are adding '&#10' 
-            $pseudo = $row['pseudo'] . "&#10";
+            $pseudo = $row['pseudo'];
             if(strpos(strtolower($message),strtolower($pseudo)) !== false) {
                 $blockChat_id = $row['chat_id'];
             }
         }
-        mysqli_query($conn, $sql_blockUser);
+        $sql_blockUser = 'UPDATE ' . $table_name . ' SET pseudo= "blocked" WHERE chat_id = "' . $blockChat_id . '";';
+        if (mysqli_query($conn, $sql_blockUser)) {
+            echo "Record updated successfully";
+        } else {
+            echo "Error updating record: " . mysqli_error($conn);
+        }
+        sendMessage($bot_id,$blockChat_id,false,'Du wurdest blockiert. Du kannst das Awarenessteam noch immer über einen anderen Weg kontaktieren.');
+        $targetChat_id = AT_CHAT_ID;
+        sendMessage($bot_id,$targetChat_id,false,'User ' . $pseudo . ' wurde blockiert.');
     }
 }
 
