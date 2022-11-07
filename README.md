@@ -10,7 +10,9 @@ Er ermöglicht es Anonym, mit dem Awarenessteam zu kommunizieren.
 Die Idee ist, dass bereits ein öffentlich zugänglicher Server besteht, welcher eine mysql Datenbank bereithält. Es kann entweder eine ganz neue Datenbank erstellt werden, oder eine bestehende erweitert werden. Es wird lediglich der Zugriff auf eine einzelne Tabelle benötigt. Es empfiehlt sich die Konfigurationsdatei außerhalb des öffentlich zugänglichen Bereiches zu speichern, wie zum Beispiel in /etc/....
 
 DB:
+
 CREATE DATABASE telegrambotdb; CREATE USER telegrambotdbuser IDENTIFIED BY 'password'; GRANT ALL PRIVILEGES on telegrambotdb.* to telegrambotdbuser; FLUSH PRIVILEGES;
+
 USE telegrambotdb; CREATE TABLE user ( id int NOT NULL AUTO_INCREMENT PRIMARY KEY, chat_id varchar(255), pseudo varchar(255)); ALTER TABLE user AUTO_INCREMENT=10; quit;
 
 ## Usage
