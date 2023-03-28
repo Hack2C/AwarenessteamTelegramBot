@@ -1,0 +1,14 @@
+[Unit]
+Description=My Telegram Bot Service
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+User=root
+WorkingDirectory=<<WorkingDirectory>>
+ExecStart=<<Path to Python>> <<Path to bot.py>>
+StandardOutput=journal+file:/var/log/bot.log
+StandardError=journal+file:/var/log/bot_error.log
+
+[Install]
+WantedBy=multi-user.target
