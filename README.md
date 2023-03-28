@@ -11,7 +11,7 @@ Er basiert auf python.
 ## Installation
 
 ### Erstellen der DB/TABLE
-Als Hilfsmittel kann die database.sql verwendet werden um eine passende DB/Tabelle zu erstellen.
+Als Hilfsmittel kann die database.sql.sample verwendet werden um eine passende DB/Tabelle zu erstellen.
 
 Example:
 
@@ -64,6 +64,7 @@ Damit der Bot dauerhaft läuft und Bootfest ist, bietet es sich an ihn mit syste
 Editiere den Inhalt des bot.service Files
 
 ```
+cp bot.service.sample bot.service
 nano bot.service
 ```
 
