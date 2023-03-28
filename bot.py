@@ -72,23 +72,31 @@ def initialize_data_from_db():
     global at_message_edit
     global db_table
     global at_chat_id
+    
     if at_chat_id:
         at_chat_id = int(at_chat_id)
+    
     load_dotenv()
     at_message_edit['edit'] = None
-    # Connect to the MySQL database
-    db = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
-    )
-    cursor=db.cursor(dictionary=True)
-    query = f"SELECT chat_id, pseudo, user_state, language_code, updated_at FROM {db_table}"
-    cursor.execute(query)
-    result = cursor.fetchall()
-    cursor.close()
-    db.close()
+    
+    try:
+        # Connect to the MySQL database
+        db = mysql.connector.connect(
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME")
+        )
+        cursor=db.cursor(dictionary=True)
+        query = f"SELECT chat_id, pseudo, user_state, language_code, updated_at FROM {db_table}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+    except mysql.connector.Error as error:
+        print("Failed to retrieve data from the database: {}".format(error))
+    finally:
+        if (db.is_connected()):
+            cursor.close()
+            db.close()
 
     if result:
         for dbuser in result:
@@ -99,87 +107,97 @@ def initialize_data_from_db():
             users[int(dbuser['chat_id'])]['updated_at']=dbuser['updated_at']
             pseudos[dbuser['pseudo']]='burned'
 
+
 async def create_db_user(chat_id):
     load_dotenv()
+
     global users
     global db_table
-    # Connect to the MySQL database
-    db = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
-    )
-    pseudo=users[chat_id]['pseudo']
-    state=users[chat_id]['user_state']
-    lang=users[chat_id]['language_code']
-    cursor = db.cursor()
-    query = f"INSERT INTO {db_table} (chat_id,pseudo,user_state,language_code) VALUES (%s,%s,%s,%s)"
-    values = (chat_id,pseudo,state,lang,)
-    cursor.execute(query, values)
-    db.commit()
-    cursor.close()
-    db.close()
+
+    try:
+        # Connect to the MySQL database
+        db = mysql.connector.connect(
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME")
+        )
+        pseudo=users[chat_id]['pseudo']
+        state=users[chat_id]['user_state']
+        lang=users[chat_id]['language_code']
+        cursor = db.cursor()
+        query = f"INSERT INTO {db_table} (chat_id,pseudo,user_state,language_code) VALUES (%s,%s,%s,%s)"
+        values = (chat_id,pseudo,state,lang,)
+        cursor.execute(query, values)
+        db.commit()
+    except mysql.connector.Error as error:
+        print("Failed to insert record into the database: {}".format(error))
+    finally:
+        if (db.is_connected()):
+            cursor.close()
+            db.close()
     
 async def update_db_user(chat_id):
-    load_dotenv()
-    global users
-    global pseudos
-    global db_table
-    users[chat_id]['updated_at']=datetime.now()
-    # Connect to the MySQL database
-    db = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
-    )
-    cursor = db.cursor(dictionary=True)
-    query = f"SELECT pseudo, user_state, language_code, updated_at FROM {db_table} WHERE chat_id = %s"
-    values = (chat_id,)
-    cursor.execute(query, values)
-    result=cursor.fetchone()
-    pseudo=users[chat_id]['pseudo']
-    state=users[chat_id]['user_state']
-    lang=users[chat_id]['language_code']
-    if result:
-
-        if result['pseudo'] != pseudo:
-            old_pseudonumber = ''
-            if result['user_state']!='new':
-                old_pseudonumber = int(str(result['pseudo'])[-2:])
-                users[old_pseudonumber]={}
-                users[old_pseudonumber]['pseudo']=result['pseudo']
-                users[old_pseudonumber]['user_state']='burned'
-                users[old_pseudonumber]['language_code']='de'
-                pseudos[result['pseudo']]='burned'
-            query = f"UPDATE {db_table} SET pseudo = %s WHERE chat_id = %s"
-            values = (pseudo,chat_id,)
-            cursor.execute(query, values)
-            db.commit()
-            await create_db_user(old_pseudonumber)
-
-        if result['user_state'] != state:
-            query = f"UPDATE {db_table} SET user_state = %s WHERE chat_id = %s"
-            values = (state,chat_id,)
-            cursor.execute(query, values)
-            db.commit()
-
-        if result['language_code'] != lang:
-            query = f"UPDATE {db_table} SET language_code = %s WHERE chat_id = %s"
-            values = (lang,chat_id,)
-            cursor.execute(query, values)
-            db.commit()
-
-        updatedelta = users[chat_id]['updated_at'] - result['updated_at']
-        if updatedelta > timedelta(minutes=3):
-            query = f"UPDATE {db_table} SET updated_at = CURRENT_TIMESTAMP WHERE chat_id = %s"
-            values = (chat_id,)
-            cursor.execute(query, values)
-            db.commit()            
-
-    cursor.close()
-    db.close()
+    try:
+        load_dotenv()
+        global users
+        global pseudos
+        global db_table
+        users[chat_id]['updated_at']=datetime.now()
+        # Connect to the MySQL database
+        db = mysql.connector.connect(
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME")
+        )
+        cursor = db.cursor(dictionary=True)
+        query = f"SELECT pseudo, user_state, language_code, updated_at FROM {db_table} WHERE chat_id = %s"
+        values = (chat_id,)
+        cursor.execute(query, values)
+        result=cursor.fetchone()
+        pseudo=users[chat_id]['pseudo']
+        state=users[chat_id]['user_state']
+        lang=users[chat_id]['language_code']
+        if result:
+            if result['pseudo'] != pseudo:
+                old_pseudonumber = ''
+                if result['user_state']!='new':
+                    old_pseudonumber = int(str(result['pseudo'])[-2:])
+                    users[old_pseudonumber]={}
+                    users[old_pseudonumber]['pseudo']=result['pseudo']
+                    users[old_pseudonumber]['user_state']='burned'
+                    users[old_pseudonumber]['language_code']='de'
+                    pseudos[result['pseudo']]='burned'
+                query = f"UPDATE {db_table} SET pseudo = %s WHERE chat_id = %s"
+                values = (pseudo,chat_id,)
+                cursor.execute(query, values)
+                db.commit()
+                await create_db_user(old_pseudonumber)
+            if result['user_state'] != state:
+                query = f"UPDATE {db_table} SET user_state = %s WHERE chat_id = %s"
+                values = (state,chat_id,)
+                cursor.execute(query, values)
+                db.commit()
+            if result['language_code'] != lang:
+                query = f"UPDATE {db_table} SET language_code = %s WHERE chat_id = %s"
+                values = (lang,chat_id,)
+                cursor.execute(query, values)
+                db.commit()
+            updatedelta = users[chat_id]['updated_at'] - result['updated_at']
+            if updatedelta > timedelta(minutes=3):
+                query = f"UPDATE {db_table} SET updated_at = CURRENT_TIMESTAMP WHERE chat_id = %s"
+                values = (chat_id,)
+                cursor.execute(query, values)
+                db.commit()
+        cursor.close()
+        db.close()
+    except Exception as e:
+        print(f"An error occurred while updating user {chat_id}: {e}")
+    finally:
+        if (db.is_connected()):
+            cursor.close()
+            db.close()
 
 async def user_is_blocked(chat_id:int):
     global users
